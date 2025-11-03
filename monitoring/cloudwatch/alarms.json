@@ -1,0 +1,20 @@
+{
+  "AlarmName": "PPBE-High-CPU-Usage",
+  "AlarmDescription": "Alert when CPU usage exceeds 80%",
+  "MetricName": "CPUUtilization",
+  "Namespace": "AWS/ECS",
+  "Statistic": "Average",
+  "Period": 300,
+  "EvaluationPeriods": 2,
+  "Threshold": 80,
+  "ComparisonOperator": "GreaterThanThreshold",
+  "Dimensions": [
+    {
+      "Name": "ServiceName",
+      "Value": "ppbe-backend"
+    }
+  ],
+  "AlarmActions": [
+    "arn:aws-us-gov:sns:us-gov-west-1:ACCOUNT_ID:ppbe-alerts"
+  ]
+}

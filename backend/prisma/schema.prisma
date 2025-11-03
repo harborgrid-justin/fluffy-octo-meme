@@ -1,0 +1,804 @@
+// =============================================================================
+// Federal PPBE System - Prisma Schema
+// Database ORM Configuration
+// Version: 1.0.0
+// =============================================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema", "fullTextSearch", "views"]
+  binaryTargets   = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["public"]
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum UserRole {
+  super_admin
+  admin
+  budget_analyst
+  program_manager
+  approver
+  auditor
+  user
+}
+
+enum UserStatus {
+  active
+  inactive
+  suspended
+  pending_activation
+}
+
+enum BudgetStatus {
+  draft
+  pending_review
+  under_review
+  pending_approval
+  approved
+  rejected
+  executed
+  closed
+}
+
+enum ProgramStatus {
+  planning
+  programming
+  budgeting
+  execution
+  completed
+  cancelled
+}
+
+enum FiscalYearStatus {
+  future
+  current
+  past
+  locked
+}
+
+enum AppropriationType {
+  RDT_E          // Research, Development, Test & Evaluation
+  PROCUREMENT    // Procurement
+  OMA            // Operation & Maintenance, Army
+  OMN            // Operation & Maintenance, Navy
+  OMAF           // Operation & Maintenance, Air Force
+  MILPERS        // Military Personnel
+  MILCON         // Military Construction
+  FAMILY_HOUSING // Family Housing
+}
+
+enum ApprovalAction {
+  approved
+  rejected
+  returned
+  delegated
+}
+
+enum TransactionType {
+  create
+  read
+  update
+  delete
+  approve
+  reject
+  export
+  import
+}
+
+// =============================================================================
+// MODELS
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Organizations - Hierarchical structure for multi-tenant support
+// -----------------------------------------------------------------------------
+model Organization {
+  id               String   @id @default(uuid()) @db.Uuid
+  parentId         String?  @map("parent_id") @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  code             String   @unique @db.VarChar(50)
+  name             String   @db.VarChar(255)
+  fullName         String?  @map("full_name") @db.Text
+  organizationType String?  @map("organization_type") @db.VarChar(100)
+  level            Int      @default(0)
+  path             String?  @db.Text
+  isActive         Boolean  @default(true) @map("is_active")
+  metadata         Json     @default("{}")
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedBy String?   @map("updated_by") @db.Uuid
+
+  // Relations
+  parent       Organization?  @relation("OrganizationHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children     Organization[] @relation("OrganizationHierarchy")
+  users        User[]
+  programs     Program[]
+  budgets      Budget[]
+  reports      Report[]
+
+  @@index([parentId])
+  @@index([tenantId])
+  @@index([code])
+  @@map("organizations")
+}
+
+// -----------------------------------------------------------------------------
+// Users - User management with RBAC
+// -----------------------------------------------------------------------------
+model User {
+  id                   String      @id @default(uuid()) @db.Uuid
+  tenantId             String      @map("tenant_id") @db.Uuid
+  organizationId       String?     @map("organization_id") @db.Uuid
+  username             String      @unique @db.VarChar(100)
+  email                String      @unique @db.VarChar(255)
+  passwordHash         String      @map("password_hash") @db.VarChar(255)
+  firstName            String?     @map("first_name") @db.VarChar(100)
+  lastName             String?     @map("last_name") @db.VarChar(100)
+  role                 UserRole    @default(user)
+  status               UserStatus  @default(pending_activation)
+  phone                String?     @db.VarChar(20)
+  title                String?     @db.VarChar(100)
+  department           String?     @db.VarChar(100)
+
+  // Security fields
+  mfaEnabled           Boolean     @default(false) @map("mfa_enabled")
+  mfaSecret            String?     @map("mfa_secret") @db.VarChar(255)
+  failedLoginAttempts  Int         @default(0) @map("failed_login_attempts")
+  lastFailedLogin      DateTime?   @map("last_failed_login") @db.Timestamptz(6)
+  lockedUntil          DateTime?   @map("locked_until") @db.Timestamptz(6)
+  passwordChangedAt    DateTime?   @map("password_changed_at") @db.Timestamptz(6)
+  passwordExpiresAt    DateTime?   @map("password_expires_at") @db.Timestamptz(6)
+
+  // Session management
+  lastLoginAt          DateTime?   @map("last_login_at") @db.Timestamptz(6)
+  lastLoginIp          String?     @map("last_login_ip") @db.Inet
+  sessionToken         String?     @map("session_token") @db.VarChar(255)
+  refreshToken         String?     @map("refresh_token") @db.VarChar(255)
+
+  // Metadata
+  metadata             Json        @default("{}")
+  createdAt            DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt            DateTime?   @map("deleted_at") @db.Timestamptz(6)
+
+  // Relations
+  organization         Organization? @relation(fields: [organizationId], references: [id])
+  managedPrograms      Program[]     @relation("ProgramManager")
+  createdBudgets       Budget[]      @relation("BudgetCreator")
+  updatedBudgets       Budget[]      @relation("BudgetUpdater")
+  approvals            Approval[]
+  notifications        Notification[]
+  auditLogs            AuditLog[]
+  comments             Comment[]
+  createdDocuments     Document[]    @relation("DocumentCreator")
+  reports              Report[]
+  createdObligations   Obligation[]  @relation("ObligationCreator")
+  cancelledObligations Obligation[]  @relation("ObligationCanceller")
+
+  @@index([tenantId])
+  @@index([organizationId])
+  @@index([email])
+  @@index([username])
+  @@index([role])
+  @@index([status])
+  @@map("users")
+}
+
+// -----------------------------------------------------------------------------
+// Fiscal Years - Federal fiscal year management
+// -----------------------------------------------------------------------------
+model FiscalYear {
+  id              String           @id @default(uuid()) @db.Uuid
+  tenantId        String           @map("tenant_id") @db.Uuid
+  year            Int
+  status          FiscalYearStatus @default(future)
+  startDate       DateTime         @map("start_date") @db.Date
+  endDate         DateTime         @map("end_date") @db.Date
+  totalBudget     Decimal          @default(0) @map("total_budget") @db.Decimal(20, 2)
+  allocatedBudget Decimal          @default(0) @map("allocated_budget") @db.Decimal(20, 2)
+  executedBudget  Decimal          @default(0) @map("executed_budget") @db.Decimal(20, 2)
+  isLocked        Boolean          @default(false) @map("is_locked")
+  lockedAt        DateTime?        @map("locked_at") @db.Timestamptz(6)
+  lockedBy        String?          @map("locked_by") @db.Uuid
+  metadata        Json             @default("{}")
+
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy       String?          @map("created_by") @db.Uuid
+  updatedBy       String?          @map("updated_by") @db.Uuid
+
+  // Relations
+  programs        Program[]
+  budgets         Budget[]
+  obligations     Obligation[]
+  expenditures    Expenditure[]
+  reports         Report[]
+
+  @@unique([tenantId, year])
+  @@index([tenantId])
+  @@index([year])
+  @@index([status])
+  @@map("fiscal_years")
+}
+
+// -----------------------------------------------------------------------------
+// Programs - Program elements in the PPBE process
+// -----------------------------------------------------------------------------
+model Program {
+  id                 String            @id @default(uuid()) @db.Uuid
+  tenantId           String            @map("tenant_id") @db.Uuid
+  organizationId     String            @map("organization_id") @db.Uuid
+  fiscalYearId       String            @map("fiscal_year_id") @db.Uuid
+  programElementCode String            @map("program_element_code") @db.VarChar(50)
+  name               String            @db.VarChar(255)
+  description        String?           @db.Text
+  status             ProgramStatus     @default(planning)
+
+  // Budget information
+  totalBudget        Decimal           @default(0) @map("total_budget") @db.Decimal(20, 2)
+  allocatedBudget    Decimal           @default(0) @map("allocated_budget") @db.Decimal(20, 2)
+  obligatedAmount    Decimal           @default(0) @map("obligated_amount") @db.Decimal(20, 2)
+  expendedAmount     Decimal           @default(0) @map("expended_amount") @db.Decimal(20, 2)
+
+  // Program details
+  appropriationType  AppropriationType? @map("appropriation_type")
+  startDate          DateTime?         @map("start_date") @db.Date
+  endDate            DateTime?         @map("end_date") @db.Date
+  programManagerId   String?           @map("program_manager_id") @db.Uuid
+  priorityLevel      Int?              @map("priority_level")
+
+  // Multi-year tracking
+  isMultiYear        Boolean           @default(false) @map("is_multi_year")
+  yearsDuration      Int?              @map("years_duration")
+
+  // Metadata
+  metadata           Json              @default("{}")
+  createdAt          DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt          DateTime?         @map("deleted_at") @db.Timestamptz(6)
+  createdBy          String?           @map("created_by") @db.Uuid
+  updatedBy          String?           @map("updated_by") @db.Uuid
+
+  // Relations
+  organization       Organization      @relation(fields: [organizationId], references: [id])
+  fiscalYear         FiscalYear        @relation(fields: [fiscalYearId], references: [id])
+  programManager     User?             @relation("ProgramManager", fields: [programManagerId], references: [id])
+  budgets            Budget[]
+  approvals          Approval[]
+  obligations        Obligation[]
+
+  @@unique([tenantId, programElementCode, fiscalYearId])
+  @@index([tenantId])
+  @@index([organizationId])
+  @@index([fiscalYearId])
+  @@index([status])
+  @@index([programElementCode])
+  @@index([programManagerId])
+  @@map("programs")
+}
+
+// -----------------------------------------------------------------------------
+// Budgets - Budget allocation and tracking
+// -----------------------------------------------------------------------------
+model Budget {
+  id                 String            @id @default(uuid()) @db.Uuid
+  tenantId           String            @map("tenant_id") @db.Uuid
+  organizationId     String            @map("organization_id") @db.Uuid
+  fiscalYearId       String            @map("fiscal_year_id") @db.Uuid
+  programId          String?           @map("program_id") @db.Uuid
+
+  // Budget identification
+  budgetNumber       String?           @unique @map("budget_number") @db.VarChar(100)
+  title              String            @db.VarChar(255)
+  description        String?           @db.Text
+  status             BudgetStatus      @default(draft)
+
+  // Financial amounts
+  requestedAmount    Decimal           @map("requested_amount") @db.Decimal(20, 2)
+  approvedAmount     Decimal?          @map("approved_amount") @db.Decimal(20, 2)
+  allocatedAmount    Decimal           @default(0) @map("allocated_amount") @db.Decimal(20, 2)
+  obligatedAmount    Decimal           @default(0) @map("obligated_amount") @db.Decimal(20, 2)
+  expendedAmount     Decimal           @default(0) @map("expended_amount") @db.Decimal(20, 2)
+
+  // Budget classification
+  appropriationType  AppropriationType @map("appropriation_type")
+  budgetActivity     String?           @map("budget_activity") @db.VarChar(100)
+  lineNumber         String?           @map("line_number") @db.VarChar(50)
+
+  // Approval tracking
+  submittedAt        DateTime?         @map("submitted_at") @db.Timestamptz(6)
+  approvedAt         DateTime?         @map("approved_at") @db.Timestamptz(6)
+  approvedBy         String?           @map("approved_by") @db.Uuid
+
+  // Version control
+  version            Int               @default(1)
+  parentVersionId    String?           @map("parent_version_id") @db.Uuid
+  isCurrentVersion   Boolean           @default(true) @map("is_current_version")
+
+  // Justification
+  justification      String?           @db.Text
+  businessCase       String?           @map("business_case") @db.Text
+
+  // Metadata
+  metadata           Json              @default("{}")
+  createdAt          DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt          DateTime?         @map("deleted_at") @db.Timestamptz(6)
+  createdBy          String?           @map("created_by") @db.Uuid
+  updatedBy          String?           @map("updated_by") @db.Uuid
+
+  // Relations
+  organization       Organization      @relation(fields: [organizationId], references: [id])
+  fiscalYear         FiscalYear        @relation(fields: [fiscalYearId], references: [id])
+  program            Program?          @relation(fields: [programId], references: [id])
+  creator            User?             @relation("BudgetCreator", fields: [createdBy], references: [id])
+  updater            User?             @relation("BudgetUpdater", fields: [updatedBy], references: [id])
+  parentVersion      Budget?           @relation("BudgetVersions", fields: [parentVersionId], references: [id])
+  childVersions      Budget[]          @relation("BudgetVersions")
+  lineItems          BudgetLineItem[]
+  approvals          Approval[]
+  obligations        Obligation[]
+  expenditures       Expenditure[]
+
+  @@index([tenantId])
+  @@index([organizationId])
+  @@index([fiscalYearId])
+  @@index([programId])
+  @@index([status])
+  @@index([budgetNumber])
+  @@index([createdBy])
+  @@map("budgets")
+}
+
+// -----------------------------------------------------------------------------
+// Budget Line Items - Detailed line-level budget tracking
+// -----------------------------------------------------------------------------
+model BudgetLineItem {
+  id               String    @id @default(uuid()) @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  budgetId         String    @map("budget_id") @db.Uuid
+  parentLineItemId String?   @map("parent_line_item_id") @db.Uuid
+
+  // Line item details
+  lineNumber       String?   @map("line_number") @db.VarChar(50)
+  title            String    @db.VarChar(255)
+  description      String?   @db.Text
+  category         String?   @db.VarChar(100)
+
+  // Financial tracking
+  requestedAmount  Decimal   @map("requested_amount") @db.Decimal(20, 2)
+  approvedAmount   Decimal?  @map("approved_amount") @db.Decimal(20, 2)
+  obligatedAmount  Decimal   @default(0) @map("obligated_amount") @db.Decimal(20, 2)
+  expendedAmount   Decimal   @default(0) @map("expended_amount") @db.Decimal(20, 2)
+
+  // Metadata
+  sortOrder        Int?      @map("sort_order")
+  metadata         Json      @default("{}")
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy        String?   @map("created_by") @db.Uuid
+  updatedBy        String?   @map("updated_by") @db.Uuid
+
+  // Relations
+  budget           Budget           @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  parentLineItem   BudgetLineItem?  @relation("LineItemHierarchy", fields: [parentLineItemId], references: [id])
+  childLineItems   BudgetLineItem[] @relation("LineItemHierarchy")
+
+  @@index([tenantId])
+  @@index([budgetId])
+  @@index([parentLineItemId])
+  @@map("budget_line_items")
+}
+
+// -----------------------------------------------------------------------------
+// Approvals - Multi-level approval workflow
+// -----------------------------------------------------------------------------
+model Approval {
+  id             String         @id @default(uuid()) @db.Uuid
+  tenantId       String         @map("tenant_id") @db.Uuid
+  budgetId       String?        @map("budget_id") @db.Uuid
+  programId      String?        @map("program_id") @db.Uuid
+
+  // Approval details
+  approverId     String         @map("approver_id") @db.Uuid
+  approvalLevel  Int            @map("approval_level")
+  status         BudgetStatus   @default(pending_approval)
+  action         ApprovalAction?
+
+  // Timing
+  requestedAt    DateTime       @default(now()) @map("requested_at") @db.Timestamptz(6)
+  actedAt        DateTime?      @map("acted_at") @db.Timestamptz(6)
+  dueDate        DateTime?      @map("due_date") @db.Timestamptz(6)
+
+  // Comments and justification
+  comments       String?        @db.Text
+  rejectionReason String?       @map("rejection_reason") @db.Text
+
+  // Delegation
+  delegatedTo    String?        @map("delegated_to") @db.Uuid
+  delegatedAt    DateTime?      @map("delegated_at") @db.Timestamptz(6)
+
+  // Metadata
+  metadata       Json           @default("{}")
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy      String?        @map("created_by") @db.Uuid
+
+  // Relations
+  budget         Budget?        @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  program        Program?       @relation(fields: [programId], references: [id], onDelete: Cascade)
+  approver       User           @relation(fields: [approverId], references: [id])
+
+  @@index([tenantId])
+  @@index([budgetId])
+  @@index([programId])
+  @@index([approverId])
+  @@index([status])
+  @@index([approvalLevel])
+  @@map("approvals")
+}
+
+// -----------------------------------------------------------------------------
+// Obligations - Financial obligation tracking
+// -----------------------------------------------------------------------------
+model Obligation {
+  id                        String      @id @default(uuid()) @db.Uuid
+  tenantId                  String      @map("tenant_id") @db.Uuid
+  budgetId                  String      @map("budget_id") @db.Uuid
+  programId                 String?     @map("program_id") @db.Uuid
+  fiscalYearId              String      @map("fiscal_year_id") @db.Uuid
+
+  // Obligation details
+  obligationNumber          String      @unique @map("obligation_number") @db.VarChar(100)
+  obligationDate            DateTime    @map("obligation_date") @db.Date
+  amount                    Decimal     @db.Decimal(20, 2)
+  description               String?     @db.Text
+  vendorName                String?     @map("vendor_name") @db.VarChar(255)
+
+  // Commitment tracking
+  commitmentNumber          String?     @map("commitment_number") @db.VarChar(100)
+  commitmentDate            DateTime?   @map("commitment_date") @db.Date
+
+  // Validation
+  isBonaFideNeed            Boolean     @default(true) @map("is_bona_fide_need")
+  bonaFideNeedJustification String?     @map("bona_fide_need_justification") @db.Text
+
+  // Status
+  isActive                  Boolean     @default(true) @map("is_active")
+  cancelledAt               DateTime?   @map("cancelled_at") @db.Timestamptz(6)
+  cancelledBy               String?     @map("cancelled_by") @db.Uuid
+  cancellationReason        String?     @map("cancellation_reason") @db.Text
+
+  // Metadata
+  metadata                  Json        @default("{}")
+  createdAt                 DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                 DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy                 String?     @map("created_by") @db.Uuid
+  updatedBy                 String?     @map("updated_by") @db.Uuid
+
+  // Relations
+  budget                    Budget      @relation(fields: [budgetId], references: [id])
+  program                   Program?    @relation(fields: [programId], references: [id])
+  fiscalYear                FiscalYear  @relation(fields: [fiscalYearId], references: [id])
+  creator                   User?       @relation("ObligationCreator", fields: [createdBy], references: [id])
+  canceller                 User?       @relation("ObligationCanceller", fields: [cancelledBy], references: [id])
+  expenditures              Expenditure[]
+
+  @@index([tenantId])
+  @@index([budgetId])
+  @@index([programId])
+  @@index([fiscalYearId])
+  @@index([obligationNumber])
+  @@index([obligationDate])
+  @@map("obligations")
+}
+
+// -----------------------------------------------------------------------------
+// Expenditures - Actual expenditure tracking
+// -----------------------------------------------------------------------------
+model Expenditure {
+  id                 String     @id @default(uuid()) @db.Uuid
+  tenantId           String     @map("tenant_id") @db.Uuid
+  obligationId       String     @map("obligation_id") @db.Uuid
+  budgetId           String     @map("budget_id") @db.Uuid
+  fiscalYearId       String     @map("fiscal_year_id") @db.Uuid
+
+  // Expenditure details
+  expenditureNumber  String     @unique @map("expenditure_number") @db.VarChar(100)
+  expenditureDate    DateTime   @map("expenditure_date") @db.Date
+  amount             Decimal    @db.Decimal(20, 2)
+  description        String?    @db.Text
+  invoiceNumber      String?    @map("invoice_number") @db.VarChar(100)
+
+  // Payment information
+  paymentDate        DateTime?  @map("payment_date") @db.Date
+  paymentMethod      String?    @map("payment_method") @db.VarChar(50)
+
+  // Metadata
+  metadata           Json       @default("{}")
+  createdAt          DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy          String?    @map("created_by") @db.Uuid
+  updatedBy          String?    @map("updated_by") @db.Uuid
+
+  // Relations
+  obligation         Obligation @relation(fields: [obligationId], references: [id])
+  budget             Budget     @relation(fields: [budgetId], references: [id])
+  fiscalYear         FiscalYear @relation(fields: [fiscalYearId], references: [id])
+
+  @@index([tenantId])
+  @@index([obligationId])
+  @@index([budgetId])
+  @@index([fiscalYearId])
+  @@index([expenditureNumber])
+  @@index([expenditureDate])
+  @@map("expenditures")
+}
+
+// -----------------------------------------------------------------------------
+// Audit Logs - Comprehensive audit trail
+// -----------------------------------------------------------------------------
+model AuditLog {
+  id                String           @id @default(uuid()) @db.Uuid
+  tenantId          String           @map("tenant_id") @db.Uuid
+
+  // Actor information
+  userId            String?          @map("user_id") @db.Uuid
+  username          String?          @db.VarChar(100)
+  userRole          UserRole?        @map("user_role")
+
+  // Action details
+  transactionType   TransactionType  @map("transaction_type")
+  entityType        String           @map("entity_type") @db.VarChar(100)
+  entityId          String           @map("entity_id") @db.Uuid
+
+  // Change tracking
+  oldValues         Json?            @map("old_values")
+  newValues         Json?            @map("new_values")
+  changedFields     String[]         @map("changed_fields")
+
+  // Context
+  actionDescription String?          @map("action_description") @db.Text
+  ipAddress         String?          @map("ip_address") @db.Inet
+  userAgent         String?          @map("user_agent") @db.Text
+  requestId         String?          @map("request_id") @db.VarChar(100)
+
+  // Timestamp
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Metadata
+  metadata          Json             @default("{}")
+
+  // Relations
+  user              User?            @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([entityType])
+  @@index([entityId])
+  @@index([transactionType])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// -----------------------------------------------------------------------------
+// Notifications - User notification system
+// -----------------------------------------------------------------------------
+model Notification {
+  id                String    @id @default(uuid()) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  userId            String    @map("user_id") @db.Uuid
+
+  // Notification content
+  title             String    @db.VarChar(255)
+  message           String    @db.Text
+  notificationType  String?   @map("notification_type") @db.VarChar(50)
+  priority          String    @default("normal") @db.VarChar(20)
+
+  // Related entities
+  relatedEntityType String?   @map("related_entity_type") @db.VarChar(100)
+  relatedEntityId   String?   @map("related_entity_id") @db.Uuid
+
+  // Status
+  isRead            Boolean   @default(false) @map("is_read")
+  readAt            DateTime? @map("read_at") @db.Timestamptz(6)
+
+  // Metadata
+  metadata          Json      @default("{}")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  expiresAt         DateTime? @map("expires_at") @db.Timestamptz(6)
+
+  // Relations
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// -----------------------------------------------------------------------------
+// Documents - Document management and attachments
+// -----------------------------------------------------------------------------
+model Document {
+  id               String    @id @default(uuid()) @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+
+  // Document details
+  filename         String    @db.VarChar(255)
+  originalFilename String    @map("original_filename") @db.VarChar(255)
+  filePath         String    @map("file_path") @db.Text
+  fileSize         BigInt    @map("file_size")
+  mimeType         String    @map("mime_type") @db.VarChar(100)
+  fileHash         String?   @map("file_hash") @db.VarChar(64)
+
+  // Related entity
+  entityType       String?   @map("entity_type") @db.VarChar(100)
+  entityId         String?   @map("entity_id") @db.Uuid
+
+  // Document metadata
+  title            String?   @db.VarChar(255)
+  description      String?   @db.Text
+  documentType     String?   @map("document_type") @db.VarChar(100)
+  tags             String[]
+
+  // Version control
+  version          Int       @default(1)
+  parentDocumentId String?   @map("parent_document_id") @db.Uuid
+
+  // Security
+  isEncrypted      Boolean   @default(false) @map("is_encrypted")
+  accessLevel      String    @default("private") @map("access_level") @db.VarChar(50)
+
+  // Metadata
+  metadata         Json      @default("{}")
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(6)
+  createdBy        String?   @map("created_by") @db.Uuid
+  updatedBy        String?   @map("updated_by") @db.Uuid
+
+  // Relations
+  creator          User?     @relation("DocumentCreator", fields: [createdBy], references: [id])
+  parentDocument   Document? @relation("DocumentVersions", fields: [parentDocumentId], references: [id])
+  childDocuments   Document[] @relation("DocumentVersions")
+
+  @@index([tenantId])
+  @@index([entityType, entityId])
+  @@index([createdBy])
+  @@index([fileHash])
+  @@map("documents")
+}
+
+// -----------------------------------------------------------------------------
+// Comments - Collaboration and discussion threads
+// -----------------------------------------------------------------------------
+model Comment {
+  id              String    @id @default(uuid()) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+
+  // Related entity
+  entityType      String    @map("entity_type") @db.VarChar(100)
+  entityId        String    @map("entity_id") @db.Uuid
+
+  // Comment details
+  parentCommentId String?   @map("parent_comment_id") @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  content         String    @db.Text
+
+  // Status
+  isEdited        Boolean   @default(false) @map("is_edited")
+  editedAt        DateTime? @map("edited_at") @db.Timestamptz(6)
+  isDeleted       Boolean   @default(false) @map("is_deleted")
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  // Metadata
+  metadata        Json      @default("{}")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  user            User      @relation(fields: [userId], references: [id])
+  parentComment   Comment?  @relation("CommentThreads", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  replies         Comment[] @relation("CommentThreads")
+
+  @@index([tenantId])
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([parentCommentId])
+  @@map("comments")
+}
+
+// -----------------------------------------------------------------------------
+// Reports - Generated report tracking
+// -----------------------------------------------------------------------------
+model Report {
+  id             String    @id @default(uuid()) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+
+  // Report details
+  reportName     String    @map("report_name") @db.VarChar(255)
+  reportType     String    @map("report_type") @db.VarChar(100)
+  format         String    @db.VarChar(50)
+  filePath       String?   @map("file_path") @db.Text
+  fileSize       BigInt?   @map("file_size")
+
+  // Report parameters
+  fiscalYearId   String?   @map("fiscal_year_id") @db.Uuid
+  organizationId String?   @map("organization_id") @db.Uuid
+  parameters     Json      @default("{}")
+
+  // Generation status
+  status         String    @default("pending") @db.VarChar(50)
+  errorMessage   String?   @map("error_message") @db.Text
+
+  // Metadata
+  metadata       Json      @default("{}")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  completedAt    DateTime? @map("completed_at") @db.Timestamptz(6)
+  expiresAt      DateTime? @map("expires_at") @db.Timestamptz(6)
+  createdBy      String?   @map("created_by") @db.Uuid
+
+  // Relations
+  fiscalYear     FiscalYear?    @relation(fields: [fiscalYearId], references: [id])
+  organization   Organization?  @relation(fields: [organizationId], references: [id])
+  creator        User?          @relation(fields: [createdBy], references: [id])
+
+  @@index([tenantId])
+  @@index([fiscalYearId])
+  @@index([organizationId])
+  @@index([createdBy])
+  @@index([status])
+  @@map("reports")
+}
+
+// -----------------------------------------------------------------------------
+// Background Jobs - Job queue tracking
+// -----------------------------------------------------------------------------
+model BackgroundJob {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String?   @map("tenant_id") @db.Uuid
+
+  // Job details
+  jobName     String    @map("job_name") @db.VarChar(255)
+  jobType     String    @map("job_type") @db.VarChar(100)
+  queueName   String    @default("default") @map("queue_name") @db.VarChar(100)
+
+  // Job data
+  payload     Json
+  result      Json?
+
+  // Status tracking
+  status      String    @default("pending") @db.VarChar(50)
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3) @map("max_attempts")
+  errorMessage String?  @map("error_message") @db.Text
+
+  // Timing
+  scheduledAt DateTime? @map("scheduled_at") @db.Timestamptz(6)
+  startedAt   DateTime? @map("started_at") @db.Timestamptz(6)
+  completedAt DateTime? @map("completed_at") @db.Timestamptz(6)
+  failedAt    DateTime? @map("failed_at") @db.Timestamptz(6)
+
+  // Metadata
+  metadata    Json      @default("{}")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([queueName])
+  @@index([scheduledAt])
+  @@map("background_jobs")
+}
