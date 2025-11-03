@@ -9,6 +9,8 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install all dependencies (including dev dependencies for TypeScript build)
+# Note: Using npm install instead of npm ci because package-lock.json is not present
+# For production, consider generating package-lock.json with: npm install --package-lock-only
 RUN npm install && \
     npm cache clean --force
 

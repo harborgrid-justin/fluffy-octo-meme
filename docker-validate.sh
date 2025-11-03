@@ -126,17 +126,11 @@ echo ""
 echo "Checking Dockerfiles..."
 
 if [ -f "backend/Dockerfile" ]; then
-    # Check basic Dockerfile syntax
-    if docker build -f backend/Dockerfile --help > /dev/null 2>&1; then
-        success "Backend Dockerfile exists"
-    fi
+    success "Backend Dockerfile exists"
 fi
 
 if [ -f "frontend/Dockerfile" ]; then
-    # Check basic Dockerfile syntax
-    if docker build -f frontend/Dockerfile --help > /dev/null 2>&1; then
-        success "Frontend Dockerfile exists"
-    fi
+    success "Frontend Dockerfile exists"
 fi
 
 echo ""
