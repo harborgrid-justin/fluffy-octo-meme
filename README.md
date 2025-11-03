@@ -52,10 +52,69 @@ This comprehensive application provides federal agencies with a complete solutio
 ## Getting Started
 
 ### Prerequisites
-- Node.js (v16 or higher)
-- npm or yarn
 
-### Installation
+**Option 1: Docker (Recommended)**
+- Docker Engine 20.10 or higher
+- Docker Compose v2.0 or higher
+
+**Option 2: Local Development**
+- Node.js (v18 or higher)
+- npm or yarn
+- PostgreSQL 16 (optional, for local database)
+- Redis 7 (optional, for caching)
+
+### Quick Start with Docker
+
+The fastest way to get started is using Docker Compose:
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd fluffy-octo-meme
+```
+
+2. Copy the environment file and configure it:
+```bash
+cp .env.example .env
+# Edit .env and set secure passwords for JWT_SECRET, POSTGRES_PASSWORD, and REDIS_PASSWORD
+```
+
+3. Start all services:
+```bash
+docker compose up
+```
+
+That's it! The application will be available at:
+- **Frontend:** http://localhost:3000
+- **Backend API:** http://localhost:5000
+- **Database:** PostgreSQL on localhost:5432
+- **Cache:** Redis on localhost:6379
+
+To stop all services:
+```bash
+docker compose down
+```
+
+To stop and remove all data (volumes):
+```bash
+docker compose down -v
+```
+
+### Docker Development with Hot Reload
+
+For development with hot reload support:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+```
+
+This enables:
+- Backend hot reload with ts-node-dev
+- Frontend hot reload with Vite HMR
+- Volume mounting for source code changes
+- Node.js debugger on port 9229
+
+### Local Installation (Without Docker)
 
 1. Clone the repository:
 ```bash
@@ -67,6 +126,7 @@ cd fluffy-octo-meme
 ```bash
 cd backend
 npm install
+npm run build
 ```
 
 3. Install frontend dependencies:
@@ -75,7 +135,7 @@ cd ../frontend
 npm install
 ```
 
-### Running the Application
+### Running the Application Locally
 
 #### Start the Backend Server
 
@@ -190,6 +250,245 @@ Authorization: Bearer <token>
 7. **CORS**: Configure CORS to only allow requests from trusted domains
 
 8. **Helmet**: Security headers are automatically applied
+
+## Docker Configuration
+
+### Services Overview
+
+The Docker setup includes the following services:
+
+| Service | Description | Port | Image/Build |
+|---------|-------------|------|-------------|
+| **postgres** | PostgreSQL 16 database | 5432 | postgres:16-alpine |
+| **redis** | Redis 7 cache | 6379 | redis:7-alpine |
+| **backend** | Node.js/TypeScript API | 5000 | Built from ./backend |
+| **frontend** | React app with nginx | 3000 (mapped to 80) | Built from ./frontend |
+| **prometheus** | Metrics collection | 9090 | prom/prometheus (optional) |
+| **grafana** | Monitoring dashboard | 3001 | grafana/grafana (optional) |
+
+### Environment Variables
+
+All environment variables are documented in `.env.example`. Key variables to configure:
+
+#### Required Variables
+```bash
+# Security - MUST CHANGE IN PRODUCTION
+JWT_SECRET=your-super-secret-jwt-key-change-this-in-production-min-32-chars
+POSTGRES_PASSWORD=changeme-use-strong-password
+REDIS_PASSWORD=changeme-use-strong-password
+
+# Application
+NODE_ENV=production
+PORT=5000
+```
+
+#### Optional Variables
+```bash
+# Database
+POSTGRES_DB=ppbe
+POSTGRES_USER=ppbe_user
+POSTGRES_PORT=5432
+
+# Redis
+REDIS_PORT=6379
+
+# Ports
+BACKEND_PORT=5000
+FRONTEND_PORT=3000
+
+# Monitoring (for monitoring profile)
+PROMETHEUS_PORT=9090
+GRAFANA_PORT=3001
+GRAFANA_USER=admin
+GRAFANA_PASSWORD=admin-change-in-production
+```
+
+### Docker Commands
+
+#### Basic Operations
+
+```bash
+# Start all services
+docker compose up
+
+# Start in detached mode (background)
+docker compose up -d
+
+# View logs
+docker compose logs -f
+
+# View logs for specific service
+docker compose logs -f backend
+
+# Stop all services
+docker compose down
+
+# Stop and remove volumes (deletes all data)
+docker compose down -v
+
+# Rebuild images
+docker compose build
+
+# Rebuild and start
+docker compose up --build
+```
+
+#### Development Mode
+
+```bash
+# Start with hot reload
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+# Rebuild dev containers
+docker compose -f docker-compose.yml -f docker-compose.dev.yml build
+
+# View dev logs
+docker compose -f docker-compose.yml -f docker-compose.dev.yml logs -f
+```
+
+#### Monitoring (Optional)
+
+Start with Prometheus and Grafana monitoring:
+
+```bash
+docker compose --profile monitoring up
+```
+
+This adds:
+- Prometheus metrics at http://localhost:9090
+- Grafana dashboards at http://localhost:3001
+
+### Service Health Checks
+
+All services include health checks:
+
+```bash
+# Check service health status
+docker compose ps
+
+# Inspect specific service health
+docker inspect ppbe-backend --format='{{json .State.Health}}'
+```
+
+### Network Configuration
+
+Services communicate over a dedicated bridge network (`ppbe-network`):
+- Subnet: 172.20.0.0/16
+- DNS: Services can reach each other by service name (e.g., `http://backend:5000`)
+
+### Volume Mounts
+
+Persistent data is stored in Docker volumes:
+
+| Volume | Purpose | Service |
+|--------|---------|---------|
+| postgres_data | Database data | postgres |
+| redis_data | Cache data | redis |
+| backend_logs | Application logs | backend |
+| prometheus_data | Metrics data | prometheus |
+| grafana_data | Dashboard data | grafana |
+
+View volumes:
+```bash
+docker volume ls
+```
+
+Backup a volume:
+```bash
+docker run --rm -v ppbe_postgres_data:/data -v $(pwd):/backup alpine tar czf /backup/postgres-backup.tar.gz /data
+```
+
+### Troubleshooting
+
+#### Database Connection Issues
+
+If backend can't connect to database:
+
+```bash
+# Check if postgres is healthy
+docker compose ps postgres
+
+# View postgres logs
+docker compose logs postgres
+
+# Verify credentials match in .env
+docker compose exec postgres psql -U ppbe_user -d ppbe -c "\dt"
+```
+
+#### Frontend Can't Reach Backend
+
+The frontend uses nginx proxy to forward API requests to the backend:
+
+```bash
+# Check nginx configuration
+docker compose exec frontend cat /etc/nginx/conf.d/default.conf
+
+# Verify backend is responding
+docker compose exec frontend wget -q -O- http://backend:5000/api/health
+```
+
+#### Build Failures
+
+```bash
+# Clean build cache
+docker compose build --no-cache
+
+# Remove old images
+docker image prune -a
+
+# Check build logs
+docker compose build backend 2>&1 | tee build.log
+```
+
+#### Port Conflicts
+
+If ports are already in use:
+
+```bash
+# Find process using port
+lsof -i :5000
+
+# Change port in .env
+echo "BACKEND_PORT=5001" >> .env
+
+# Restart services
+docker compose up -d
+```
+
+### Production Deployment
+
+For production deployment with Docker:
+
+1. **Set secure environment variables:**
+   ```bash
+   cp .env.example .env
+   # Edit .env with production values
+   # Use strong, random passwords
+   # Set NODE_ENV=production
+   ```
+
+2. **Use production compose file:**
+   ```bash
+   docker compose -f docker-compose.yml up -d
+   ```
+
+3. **Enable monitoring:**
+   ```bash
+   docker compose --profile monitoring up -d
+   ```
+
+4. **Set up automated backups:**
+   ```bash
+   # Add to crontab for daily backups
+   0 2 * * * cd /path/to/fluffy-octo-meme && docker compose exec -T postgres pg_dump -U ppbe_user ppbe > backup-$(date +\%Y\%m\%d).sql
+   ```
+
+5. **Configure reverse proxy** (nginx/Apache) with SSL/TLS in front of the frontend container
+
+6. **Monitor logs and metrics:**
+   ```bash
+   docker compose logs -f --tail=100
+   ```
 
 ## Project Structure
 

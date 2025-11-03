@@ -8,12 +8,15 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies (including dev dependencies for build)
-RUN npm ci --only=production && \
+# Install all dependencies (including dev dependencies for TypeScript build)
+RUN npm install && \
     npm cache clean --force
 
 # Copy application source
 COPY . .
+
+# Build TypeScript code
+RUN npm run build
 
 # Stage 2: Production stage
 FROM node:20-alpine AS production
@@ -28,11 +31,16 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Copy node_modules from builder stage
-COPY --from=builder /app/node_modules ./node_modules
+# Install only production dependencies
+RUN npm install --only=production && \
+    npm cache clean --force
 
-# Copy application files
-COPY --chown=nodejs:nodejs . .
+# Copy compiled code from builder stage
+COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+
+# Copy migrations and other necessary files
+COPY --chown=nodejs:nodejs migrations ./migrations
+COPY --chown=nodejs:nodejs database ./database
 
 # Switch to non-root user
 USER nodejs
@@ -45,4 +53,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD node -e "require('http').get('http://localhost:5000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # Start application
-CMD ["node", "server.js"]
+CMD ["node", "dist/server.js"]
