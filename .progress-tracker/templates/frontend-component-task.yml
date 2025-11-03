@@ -1,0 +1,135 @@
+# Frontend Component Task Template
+# Copy this file to .progress-tracker/active/ and fill in the details
+
+task_id: FE-XXX  # Use FE- prefix for frontend tasks
+title: [Short descriptive title]
+status: pending
+priority: medium  # low|medium|high|critical
+assigned_agent: frontend-expert
+created_date: YYYY-MM-DD
+started_date: null
+target_completion: YYYY-MM-DD
+completed_date: null
+
+description: |
+  Detailed description of the component to implement.
+  Include UI/UX requirements and user interactions.
+
+acceptance_criteria:
+  - criterion: Component renders correctly
+    status: pending
+
+  - criterion: All required props and state handled
+    status: pending
+
+  - criterion: User interactions work as expected
+    status: pending
+
+  - criterion: Responsive design (mobile, tablet, desktop)
+    status: pending
+
+  - criterion: Accessibility compliance (WCAG 2.1 AA)
+    status: pending
+
+  - criterion: Integration with state management
+    status: pending
+
+  - criterion: Error states handled gracefully
+    status: pending
+
+  - criterion: Loading states implemented
+    status: pending
+
+  - criterion: Component tests with 80%+ coverage
+    status: pending
+
+  - criterion: Accessibility tests pass
+    status: pending
+
+dependencies: []
+  # - ARCH-XXX  # Component design approved
+  # - BE-XXX    # API endpoints available
+
+related_files: []
+  # - src/components/[component-name].tsx
+  # - src/components/[component-name].test.tsx
+  # - src/components/[component-name].stories.tsx
+
+agents_involved:
+  - frontend-expert
+  - testing-specialist
+  - security-compliance-expert  # For accessibility review
+  - task-completion-agent
+
+blockers: []
+
+notes: []
+
+verification_checklist:
+  code_quality:
+    - criterion: TypeScript types properly defined for props and state
+      status: pending
+    - criterion: Component properly memoized if needed
+      status: pending
+    - criterion: No prop drilling (proper state management)
+      status: pending
+    - criterion: Event handlers properly typed
+      status: pending
+    - criterion: Code follows React best practices
+      status: pending
+
+  ui_ux:
+    - criterion: Matches design specifications
+      status: pending
+    - criterion: Responsive on all breakpoints
+      status: pending
+    - criterion: Loading states provide feedback
+      status: pending
+    - criterion: Error messages are user-friendly
+      status: pending
+    - criterion: Animations/transitions are smooth
+      status: pending
+
+  accessibility:
+    - criterion: Keyboard navigation works
+      status: pending
+    - criterion: Focus management implemented
+      status: pending
+    - criterion: ARIA labels and roles correct
+      status: pending
+    - criterion: Color contrast meets WCAG AA
+      status: pending
+    - criterion: Screen reader compatible
+      status: pending
+    - criterion: Axe accessibility tests pass
+      status: pending
+
+  testing:
+    - criterion: Component renders without errors
+      status: pending
+    - criterion: User interactions tested
+      status: pending
+    - criterion: Edge cases covered
+      status: pending
+    - criterion: Coverage goals met (80%+)
+      status: pending
+    - criterion: Snapshot tests if appropriate
+      status: pending
+
+  documentation:
+    - criterion: Props documented with TSDoc
+      status: pending
+    - criterion: Usage examples provided
+      status: pending
+    - criterion: Storybook stories created
+      status: pending
+
+  performance:
+    - criterion: No unnecessary re-renders
+      status: pending
+    - criterion: Large lists virtualized if needed
+      status: pending
+    - criterion: Images optimized and lazy-loaded
+      status: pending
+    - criterion: Bundle size impact acceptable
+      status: pending

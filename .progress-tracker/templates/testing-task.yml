@@ -1,0 +1,115 @@
+# Testing Task Template
+# Copy this file to .progress-tracker/active/ and fill in the details
+
+task_id: TEST-XXX  # Use TEST- prefix for testing tasks
+title: [Short descriptive title]
+status: pending
+priority: medium  # low|medium|high|critical
+assigned_agent: testing-specialist
+created_date: YYYY-MM-DD
+started_date: null
+target_completion: YYYY-MM-DD
+completed_date: null
+
+description: |
+  Detailed description of what needs to be tested.
+  Include scope and testing approach.
+
+acceptance_criteria:
+  - criterion: Test suite implemented
+    status: pending
+
+  - criterion: All tests pass
+    status: pending
+
+  - criterion: Coverage goals met
+    status: pending
+
+  - criterion: Edge cases covered
+    status: pending
+
+  - criterion: Performance tests if applicable
+    status: pending
+
+  - criterion: Accessibility tests if applicable
+    status: pending
+
+dependencies: []
+  # - BE-XXX  # Implementation must be complete
+  # - FE-XXX  # Component must be complete
+
+related_files: []
+  # - tests/unit/example.test.ts
+  # - tests/integration/example.test.ts
+  # - tests/e2e/example.spec.ts
+
+agents_involved:
+  - testing-specialist
+  - backend-expert         # For API tests
+  - frontend-expert        # For component tests
+  - task-completion-agent
+
+blockers: []
+
+notes: []
+
+verification_checklist:
+  test_coverage:
+    - criterion: Unit tests for business logic
+      status: pending
+    - criterion: Integration tests for APIs
+      status: pending
+    - criterion: E2E tests for critical paths
+      status: pending
+    - criterion: Coverage meets goals (unit 90%, integration 85%, component 80%)
+      status: pending
+
+  test_quality:
+    - criterion: Tests follow AAA pattern (Arrange-Act-Assert)
+      status: pending
+    - criterion: Tests are independent (no interdependencies)
+      status: pending
+    - criterion: Tests use meaningful names
+      status: pending
+    - criterion: Test data properly isolated
+      status: pending
+    - criterion: Mocks/stubs used appropriately
+      status: pending
+
+  test_execution:
+    - criterion: All tests pass consistently
+      status: pending
+    - criterion: No flaky tests
+      status: pending
+    - criterion: Tests run in reasonable time
+      status: pending
+    - criterion: Tests integrated into CI/CD
+      status: pending
+
+  coverage:
+    - criterion: Happy path covered
+      status: pending
+    - criterion: Error scenarios covered
+      status: pending
+    - criterion: Edge cases covered
+      status: pending
+    - criterion: Boundary conditions tested
+      status: pending
+
+  specialized_testing:
+    - criterion: Security tests if applicable
+      status: not_applicable
+    - criterion: Performance tests if applicable
+      status: not_applicable
+    - criterion: Accessibility tests if applicable
+      status: not_applicable
+    - criterion: Load tests if applicable
+      status: not_applicable
+
+  documentation:
+    - criterion: Test purpose documented
+      status: pending
+    - criterion: Test data explained
+      status: pending
+    - criterion: Setup/teardown documented
+      status: pending

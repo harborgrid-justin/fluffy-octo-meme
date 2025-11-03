@@ -1,0 +1,126 @@
+# Backend API Task Template
+# Copy this file to .progress-tracker/active/ and fill in the details
+
+task_id: BE-XXX  # Use BE- prefix for backend tasks
+title: [Short descriptive title]
+status: pending
+priority: medium  # low|medium|high|critical
+assigned_agent: backend-expert
+created_date: YYYY-MM-DD
+started_date: null
+target_completion: YYYY-MM-DD
+completed_date: null
+
+description: |
+  Detailed description of the API functionality to implement.
+  Include business requirements and context.
+
+acceptance_criteria:
+  - criterion: API endpoints implemented (list specific endpoints)
+    status: pending
+    verified_by: null
+    verified_date: null
+
+  - criterion: Request/response validation with Zod schemas
+    status: pending
+
+  - criterion: Business logic implemented correctly
+    status: pending
+
+  - criterion: Database queries optimized with proper indexes
+    status: pending
+
+  - criterion: Error handling with appropriate HTTP status codes
+    status: pending
+
+  - criterion: Audit logging for all state changes
+    status: pending
+
+  - criterion: Unit tests with 90%+ coverage
+    status: pending
+
+  - criterion: Integration tests for all endpoints
+    status: pending
+
+  - criterion: API documentation (OpenAPI/Swagger)
+    status: pending
+
+  - criterion: Security review completed
+    status: pending
+    depends_on: security-compliance-expert
+
+dependencies: []
+  # - TASK-XXX  # List any prerequisite tasks
+
+related_files: []
+  # Files will be added as development progresses
+  # - src/api/routes/example.ts
+  # - src/services/example-service.ts
+  # - tests/integration/example.test.ts
+
+agents_involved:
+  - backend-expert       # Primary implementation
+  - testing-specialist   # Test implementation
+  - security-compliance-expert  # Security review
+  - task-completion-agent  # Final verification
+
+blockers: []
+
+notes: []
+  # Add timestamped notes as work progresses
+  # - "YYYY-MM-DD HH:MM: Note about progress"
+
+verification_checklist:
+  code_quality:
+    - criterion: TypeScript types properly defined
+      status: pending
+    - criterion: Error handling implemented
+      status: pending
+    - criterion: Input validation on all endpoints
+      status: pending
+    - criterion: Logging added for debugging and audit
+      status: pending
+    - criterion: Code follows style guide
+      status: pending
+
+  testing:
+    - criterion: Unit tests pass
+      status: pending
+    - criterion: Integration tests pass
+      status: pending
+    - criterion: Coverage goals met (90%+)
+      status: pending
+    - criterion: Edge cases tested
+      status: pending
+    - criterion: Error scenarios tested
+      status: pending
+
+  documentation:
+    - criterion: Code comments added
+      status: pending
+    - criterion: API documentation generated
+      status: pending
+    - criterion: README updated if needed
+      status: pending
+
+  security:
+    - criterion: Authentication required on protected endpoints
+      status: pending
+    - criterion: Authorization checks implemented
+      status: pending
+    - criterion: SQL injection prevention (parameterized queries)
+      status: pending
+    - criterion: XSS prevention
+      status: pending
+    - criterion: Rate limiting considered
+      status: pending
+
+  compliance:
+    - criterion: Audit logging captures required information
+      status: pending
+    - criterion: Sensitive data not logged
+      status: pending
+    - criterion: Federal compliance requirements met
+      status: pending
+    - criterion: Data validation meets business rules
+      status: pending

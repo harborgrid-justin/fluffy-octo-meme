@@ -1,0 +1,25 @@
+{
+  "sprint_id": "SPRINT-001",
+  "name": "Initial PPBE Infrastructure Setup",
+  "start_date": "2025-11-03",
+  "end_date": "2025-11-17",
+  "status": "active",
+  "progress": {
+    "total_tasks": 0,
+    "completed": 0,
+    "in_progress": 0,
+    "pending": 0,
+    "blocked": 0,
+    "completion_percentage": 0
+  },
+  "tasks": [],
+  "velocity": {
+    "planned_story_points": 0,
+    "completed_story_points": 0,
+    "projected_completion": "2025-11-17"
+  },
+  "risks": [],
+  "notes": [
+    "2025-11-03: Sprint created - focusing on initial project setup and agent coordination system"
+  ]
+}
