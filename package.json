@@ -1,0 +1,33 @@
+{
+  "name": "fluffy-octo-meme",
+  "version": "1.0.0",
+  "description": "A production-ready US federal government Planning, Programming, Budgeting, and Execution (PPBE) management and administration system with full GUI.",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm run test:backend && npm run test:frontend && npm run test:e2e",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "test:coverage": "npm run test:backend:coverage && npm run test:frontend:coverage",
+    "test:backend:coverage": "cd backend && npm run test:coverage",
+    "test:frontend:coverage": "cd frontend && npm run test:coverage",
+    "test:all": "npm run test:backend && npm run test:frontend && npm run test:e2e",
+    "test:ci": "npm run test:backend:coverage && npm run test:frontend:coverage && npm run test:e2e",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://local_proxy@127.0.0.1:34484/git/harborgrid-justin/fluffy-octo-meme"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@axe-core/playwright": "^4.11.0",
+    "@playwright/test": "^1.56.1",
+    "playwright": "^1.56.1"
+  }
+}

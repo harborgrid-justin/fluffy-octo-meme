@@ -1,0 +1,184 @@
+# DEVOPS-009: Prometheus Alert Rules for PPBE System
+groups:
+  - name: ppbe_application_alerts
+    interval: 30s
+    rules:
+      # Application Health Alerts
+      - alert: ApplicationDown
+        expr: up{job=~"ppbe-backend|ppbe-frontend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: application
+        annotations:
+          summary: "Application {{ $labels.job }} is down"
+          description: "{{ $labels.job }} has been down for more than 1 minute"
+
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          component: application
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value }} errors per second"
+
+      - alert: SlowResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: performance
+        annotations:
+          summary: "Slow API response time"
+          description: "95th percentile response time is {{ $value }} seconds"
+
+      # Database Alerts
+      - alert: DatabaseDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "PostgreSQL database is down"
+          description: "PostgreSQL has been down for more than 1 minute"
+
+      - alert: HighDatabaseConnections
+        expr: pg_stat_database_numbackends > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "High number of database connections"
+          description: "Database has {{ $value }} active connections"
+
+      - alert: DatabaseDiskSpaceWarning
+        expr: (pg_database_size_bytes / pg_settings_max_wal_size_bytes) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Database disk space warning"
+          description: "Database is using {{ $value }}% of available space"
+
+      # Redis Alerts
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: cache
+        annotations:
+          summary: "Redis is down"
+          description: "Redis has been down for more than 1 minute"
+
+      - alert: RedisHighMemoryUsage
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Redis high memory usage"
+          description: "Redis is using {{ $value }}% of available memory"
+
+      # Infrastructure Alerts
+      - alert: HighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is {{ $value }}% for {{ $labels.name }}"
+
+      - alert: HighMemoryUsage
+        expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value }}% for {{ $labels.name }}"
+
+      - alert: ContainerRestarting
+        expr: rate(kube_pod_container_status_restarts_total[15m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "Container is restarting"
+          description: "Container {{ $labels.container }} is restarting frequently"
+
+      # Security Alerts
+      - alert: UnauthorizedAccessAttempts
+        expr: rate(http_requests_total{status="401"}[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          component: security
+        annotations:
+          summary: "High rate of unauthorized access attempts"
+          description: "{{ $value }} unauthorized access attempts per second"
+
+      - alert: RateLimitExceeded
+        expr: rate(rate_limit_exceeded_total[5m]) > 5
+        for: 2m
+        labels:
+          severity: warning
+          component: security
+        annotations:
+          summary: "Rate limit frequently exceeded"
+          description: "Rate limit exceeded {{ $value }} times per second"
+
+      # Federal Compliance Alerts
+      - alert: AuditLogFailure
+        expr: rate(audit_log_errors_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          component: compliance
+        annotations:
+          summary: "Audit logging failure detected"
+          description: "Audit logs are failing - compliance requirement violation"
+
+      - alert: DataEncryptionFailure
+        expr: rate(encryption_errors_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          component: security
+        annotations:
+          summary: "Data encryption failure"
+          description: "Encryption operations are failing - security violation"
+
+  - name: ppbe_business_alerts
+    interval: 60s
+    rules:
+      # Business Logic Alerts
+      - alert: BudgetApprovalBacklog
+        expr: count(budget_status{status="pending"}) > 50
+        for: 1h
+        labels:
+          severity: warning
+          component: business
+        annotations:
+          summary: "High number of pending budget approvals"
+          description: "{{ $value }} budgets are pending approval"
+
+      - alert: UnusualBudgetActivity
+        expr: rate(budget_transactions_total[1h]) > 100
+        for: 30m
+        labels:
+          severity: info
+          component: business
+        annotations:
+          summary: "Unusual budget activity detected"
+          description: "{{ $value }} budget transactions per hour"

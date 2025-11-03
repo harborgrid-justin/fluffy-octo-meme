@@ -1,0 +1,359 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "PPBE Management System API",
+    "version": "1.0.0",
+    "description": "Production-grade API for federal Planning, Programming, Budgeting, and Execution (PPBE) system",
+    "contact": {
+      "name": "API Support",
+      "email": "support@ppbe.gov"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000/api",
+      "description": "Development server"
+    },
+    {
+      "url": "https://api.ppbe.gov/api",
+      "description": "Production server"
+    }
+  ],
+  "tags": [
+    { "name": "Authentication", "description": "JWT authentication with refresh tokens (BE-002)" },
+    { "name": "Users", "description": "User management with RBAC (BE-001)" },
+    { "name": "Budgets", "description": "Budget allocation and version control (BE-004, BE-015)" },
+    { "name": "Line Items", "description": "Budget line item management (BE-005)" },
+    { "name": "Fiscal Years", "description": "Fiscal year management (BE-006)" },
+    { "name": "Programs", "description": "Program element management (BE-007)" },
+    { "name": "Organizations", "description": "Organization hierarchy (BE-008)" },
+    { "name": "Approvals", "description": "Multi-level approval workflows (BE-009, BE-010)" },
+    { "name": "Audit", "description": "Comprehensive audit logging (BE-011)" },
+    { "name": "Documents", "description": "Document upload and attachment (BE-012)" },
+    { "name": "Reports", "description": "Report generation and export (BE-013, BE-014)" },
+    { "name": "Comments", "description": "Collaboration and comments (BE-016)" },
+    { "name": "Notifications", "description": "Notification service (BE-017)" },
+    { "name": "Search", "description": "Advanced search and filtering (BE-018)" },
+    { "name": "Obligations", "description": "Obligation tracking (BE-019)" },
+    { "name": "Expenditures", "description": "Expenditure tracking (BE-020)" },
+    { "name": "Variance", "description": "Budget vs actual variance analysis (BE-021)" },
+    { "name": "Appropriations", "description": "Appropriation validation and fund availability (BE-022, BE-023)" },
+    { "name": "Bulk Operations", "description": "Bulk import/export and validation (BE-024, BE-025)" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": false },
+          "message": { "type": "string" },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": { "type": "string" },
+                "message": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "username": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "firstName": { "type": "string" },
+          "lastName": { "type": "string" },
+          "role": {
+            "type": "string",
+            "enum": ["admin", "budget_analyst", "program_manager", "finance_officer", "approver", "viewer", "user"]
+          },
+          "department": { "type": "string" },
+          "active": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Budget": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "fiscalYearId": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "amount": { "type": "number" },
+          "allocatedAmount": { "type": "number" },
+          "obligatedAmount": { "type": "number" },
+          "expendedAmount": { "type": "number" },
+          "department": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["draft", "submitted", "approved", "rejected", "active", "closed"]
+          },
+          "version": { "type": "number" },
+          "createdBy": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "FiscalYear": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "year": { "type": "number" },
+          "name": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["planning", "current", "closed", "future"]
+          },
+          "startDate": { "type": "string", "format": "date-time" },
+          "endDate": { "type": "string", "format": "date-time" },
+          "totalBudget": { "type": "number" }
+        }
+      },
+      "ProgramElement": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "peNumber": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "department": { "type": "string" },
+          "fiscalYearId": { "type": "string", "format": "uuid" },
+          "budget": { "type": "number" },
+          "status": {
+            "type": "string",
+            "enum": ["planning", "programming", "budgeting", "execution", "completed", "cancelled"]
+          },
+          "priority": { "type": "number" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "tags": ["System"],
+        "responses": {
+          "200": {
+            "description": "Server is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "healthy" },
+                    "timestamp": { "type": "string", "format": "date-time" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "User login",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["username", "password"],
+                "properties": {
+                  "username": { "type": "string" },
+                  "password": { "type": "string", "format": "password" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": { "$ref": "#/components/schemas/User" },
+                        "tokens": {
+                          "type": "object",
+                          "properties": {
+                            "accessToken": { "type": "string" },
+                            "refreshToken": { "type": "string" },
+                            "expiresIn": { "type": "number" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/budgets": {
+      "get": {
+        "summary": "Get all budgets",
+        "tags": ["Budgets"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "fiscalYearId",
+            "in": "query",
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "department",
+            "in": "query",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of budgets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Budget" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create budget",
+        "tags": ["Budgets"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["fiscalYearId", "title", "amount", "department"],
+                "properties": {
+                  "fiscalYearId": { "type": "string", "format": "uuid" },
+                  "title": { "type": "string" },
+                  "description": { "type": "string" },
+                  "amount": { "type": "number" },
+                  "department": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Budget created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": { "$ref": "#/components/schemas/Budget" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fiscal-years": {
+      "get": {
+        "summary": "Get all fiscal years",
+        "tags": ["Fiscal Years"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "List of fiscal years",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/FiscalYear" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/programs": {
+      "get": {
+        "summary": "Get all program elements",
+        "tags": ["Programs"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "List of program elements",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/ProgramElement" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

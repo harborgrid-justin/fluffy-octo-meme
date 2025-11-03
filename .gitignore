@@ -24,6 +24,11 @@ Thumbs.db
 
 # Testing
 coverage/
+.vitest/
+test-results/
+playwright-report/
+playwright/.cache/
+*.lcov
 
 # Temporary files
 tmp/
