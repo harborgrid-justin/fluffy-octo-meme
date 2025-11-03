@@ -31,7 +31,6 @@ services:
       - ./frontend/src:/app/src:ro
       - ./frontend/index.html:/app/index.html:ro
       - ./frontend/vite.config.js:/app/vite.config.js:ro
-      - ./frontend/vite.config.ts:/app/vite.config.ts:ro
     environment:
       NODE_ENV: development
     ports:

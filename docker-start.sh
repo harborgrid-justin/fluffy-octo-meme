@@ -100,10 +100,10 @@ done
 # Build command based on mode
 if [ "$MODE" = "development" ]; then
     echo "🔧 Starting in DEVELOPMENT mode (hot reload enabled)..."
-    COMPOSE_CMD="docker compose -f docker-compose.yml -f docker-compose.dev.yml up $DETACHED $REBUILD $MONITORING"
+    COMPOSE_CMD="docker compose $MONITORING -f docker-compose.yml -f docker-compose.dev.yml up $DETACHED $REBUILD"
 else
     echo "🚀 Starting in PRODUCTION mode..."
-    COMPOSE_CMD="docker compose up $DETACHED $REBUILD $MONITORING"
+    COMPOSE_CMD="docker compose $MONITORING up $DETACHED $REBUILD"
 fi
 
 echo "Command: $COMPOSE_CMD"
