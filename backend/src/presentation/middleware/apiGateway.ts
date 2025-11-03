@@ -24,8 +24,7 @@ export function apiVersionRouter() {
 
     // Extract API version from path (e.g., /api/v1/...)
     const pathMatch = req.path.match(/^\/api\/(v\d+)\//);
-    const pathVersion = pathMatch ? pathMatch[1] : undefined;
-
+  const pathVersion = req.path.match(/^\/api\/(v\d+)\//)?.[1];
     // Determine final version (header takes precedence)
     const apiVersion = versionHeader || pathVersion || 'v1';
 

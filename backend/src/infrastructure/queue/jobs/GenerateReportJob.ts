@@ -63,7 +63,7 @@ export class GenerateReportJob {
       console.error(`[GenerateReportJob] Error generating report:`, error);
 
       // Update report status to failed
-      await this.updateReportStatus(reportId, 'failed', undefined, undefined, error.message);
+      await this.updateReportStatus(reportId, 'failed', undefined, undefined, (error as Error).message);
 
       throw error;
     }
