@@ -65,7 +65,27 @@ This comprehensive application provides federal agencies with a complete solutio
 
 ### Quick Start with Docker
 
-The fastest way to get started is using Docker Compose:
+The fastest way to get started is using Docker Compose. We provide helper scripts for convenience:
+
+#### Using the Quick Start Script (Recommended)
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd fluffy-octo-meme
+```
+
+2. Validate the Docker setup:
+```bash
+./docker-validate.sh
+```
+
+3. Start all services:
+```bash
+./docker-start.sh
+```
+
+#### Manual Setup
 
 1. Clone the repository:
 ```bash
@@ -84,11 +104,16 @@ cp .env.example .env
 docker compose up
 ```
 
-That's it! The application will be available at:
+#### Access the Application
+
+The application will be available at:
 - **Frontend:** http://localhost:3000
 - **Backend API:** http://localhost:5000
+- **Health Check:** http://localhost:5000/api/health
 - **Database:** PostgreSQL on localhost:5432
 - **Cache:** Redis on localhost:6379
+
+#### Stopping Services
 
 To stop all services:
 ```bash
@@ -99,6 +124,17 @@ To stop and remove all data (volumes):
 ```bash
 docker compose down -v
 ```
+
+#### Helper Scripts
+
+- **`./docker-validate.sh`** - Validates Docker configuration before starting
+- **`./docker-start.sh`** - Quick start with options for dev mode, monitoring, etc.
+  - `./docker-start.sh -d` - Start in development mode with hot reload
+  - `./docker-start.sh -m` - Start with Prometheus/Grafana monitoring
+  - `./docker-start.sh --detach` - Run in background
+  - `./docker-start.sh -h` - Show all options
+
+📖 **For detailed Docker documentation, see [DOCKER-SETUP.md](DOCKER-SETUP.md)**
 
 ### Docker Development with Hot Reload
 
