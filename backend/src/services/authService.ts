@@ -1,7 +1,7 @@
 // BE-002: Authentication Service (JWT + refresh tokens)
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { User, AuthTokens, RefreshToken, JWTPayload } from '../types';
 import { dataStore } from './dataStore';
 import { AppError } from '../middleware/errorHandler';
@@ -118,8 +118,8 @@ export class AuthService {
       role: user.role,
     };
 
-    const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
-    const refreshToken = jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: JWT_REFRESH_EXPIRY });
+    const accessToken = jwt.sign(payload, JWT_SECRET as string, { expiresIn: JWT_EXPIRY } as SignOptions);
+    const refreshToken = jwt.sign(payload, JWT_REFRESH_SECRET as string, { expiresIn: JWT_REFRESH_EXPIRY } as SignOptions);
 
     // Store refresh token
     const expiresAt = new Date();

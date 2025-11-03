@@ -8,13 +8,10 @@
  * - Trigger report generation
  */
 
-import { IDomainEventHandler } from '../../../domain/shared/DomainEvent';
+import { IDomainEventHandler, DomainEvent } from '../../../domain/shared/DomainEvent';
 
 // Example event structure
-export class BudgetApprovedEvent {
-  public readonly eventType = 'BudgetApproved';
-  public readonly occurredAt: Date;
-
+export class BudgetApprovedEvent extends DomainEvent {
   constructor(
     public readonly budgetId: string,
     public readonly budgetTitle: string,
@@ -22,7 +19,7 @@ export class BudgetApprovedEvent {
     public readonly approvedBy: string,
     public readonly fiscalYearId: string
   ) {
-    this.occurredAt = new Date();
+    super();
   }
 
   getPayload() {
