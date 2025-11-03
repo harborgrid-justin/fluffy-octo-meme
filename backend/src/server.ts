@@ -5,7 +5,7 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import routes from './routes';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
-import { initService } from './services/initService';
+import { seedService } from './services/seedService';
 
 // Load environment variables
 dotenv.config();
@@ -85,8 +85,8 @@ app.use(errorHandler);
 
 const startServer = async () => {
   try {
-    // Initialize default data
-    await initService.initializeDefaultData();
+    // Seed database with comprehensive data for all features
+    await seedService.seedAllData();
 
     // Start the server
     app.listen(PORT, () => {
