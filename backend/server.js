@@ -5,15 +5,34 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const { body, validationResult } = require('express-validator');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
+// Rate limiting middleware
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 login attempts per windowMs
+  message: 'Too many authentication attempts, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Middleware
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+app.use('/api/', apiLimiter);
 
 // In-memory data stores (would be database in production)
 const users = [];
@@ -79,7 +98,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Authentication routes
-app.post('/api/auth/register', [
+app.post('/api/auth/register', authLimiter, [
   body('username').isLength({ min: 3 }),
   body('password').isLength({ min: 6 }),
   body('email').isEmail()
@@ -122,7 +141,7 @@ app.post('/api/auth/register', [
   });
 });
 
-app.post('/api/auth/login', [
+app.post('/api/auth/login', authLimiter, [
   body('username').notEmpty(),
   body('password').notEmpty()
 ], async (req, res) => {
