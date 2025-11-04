@@ -17,6 +17,12 @@ function Navigation() {
         <NavLink to="/execution" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
           Execution Tracking
         </NavLink>
+        <NavLink to="/applications" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+          My Applications
+        </NavLink>
+        <NavLink to="/application-management" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+          Application Management
+        </NavLink>
       </div>
     </nav>
   );

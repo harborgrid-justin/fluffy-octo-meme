@@ -27,6 +27,12 @@ export class DataStore {
   private varianceAnalyses: VarianceAnalysis[] = [];
   private appropriations: Appropriation[] = [];
   private refreshTokens: RefreshToken[] = [];
+  
+  // Application tracking collections
+  private applications: any[] = [];
+  private applicationStatusHistory: any[] = [];
+  private applicationComments: any[] = [];
+  private fundDisbursements: any[] = [];
 
   // Generic CRUD operations
   create<T extends { id: string }>(collection: string, item: T): T {
@@ -118,6 +124,10 @@ export class DataStore {
     this.varianceAnalyses = [];
     this.appropriations = [];
     this.refreshTokens = [];
+    this.applications = [];
+    this.applicationStatusHistory = [];
+    this.applicationComments = [];
+    this.fundDisbursements = [];
   }
 }
 

@@ -102,4 +102,59 @@ export const getExecutionTimeline = () =>
 export const getFiscalYears = () => 
   api.get('/fiscal-years');
 
+// Applications
+export const getApplications = (params) => 
+  api.get('/applications', { params });
+
+export const getApplication = (id) => 
+  api.get(`/applications/${id}`);
+
+export const createApplication = (data) => 
+  api.post('/applications', data);
+
+export const updateApplication = (id, data) => 
+  api.put(`/applications/${id}`, data);
+
+export const submitApplication = (id) => 
+  api.post(`/applications/${id}/submit`);
+
+export const assignApplication = (id, assignedToId) => 
+  api.post(`/applications/${id}/assign`, { assignedToId });
+
+export const startReview = (id) => 
+  api.post(`/applications/${id}/start-review`);
+
+export const completeReview = (id, recommendApproval, notes) => 
+  api.post(`/applications/${id}/complete-review`, { recommendApproval, notes });
+
+export const approveApplication = (id, approvedAmount, notes) => 
+  api.post(`/applications/${id}/approve`, { approvedAmount, notes });
+
+export const rejectApplication = (id, reason) => 
+  api.post(`/applications/${id}/reject`, { reason });
+
+export const disburseFunds = (id, amount, paymentMethod, transactionId) => 
+  api.post(`/applications/${id}/disburse-funds`, { amount, paymentMethod, transactionId });
+
+export const closeApplication = (id) => 
+  api.post(`/applications/${id}/close`);
+
+export const cancelApplication = (id, reason) => 
+  api.post(`/applications/${id}/cancel`, { reason });
+
+export const getApplicationStatusHistory = (id) => 
+  api.get(`/applications/${id}/status-history`);
+
+export const addApplicationComment = (id, comment, isInternal) => 
+  api.post(`/applications/${id}/comments`, { comment, isInternal });
+
+export const getApplicationComments = (id, includeInternal) => 
+  api.get(`/applications/${id}/comments`, { params: { includeInternal } });
+
+export const getApplicationDisbursements = (id) => 
+  api.get(`/applications/${id}/disbursements`);
+
+export const getApplicationSummary = (params) => 
+  api.get('/applications/summary', { params });
+
 export default api;

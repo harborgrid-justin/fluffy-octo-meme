@@ -11,6 +11,7 @@ import * as schemas from '../validation/schemas';
 // Import controllers
 import { authController } from '../controllers/authController';
 import { userController } from '../controllers/userController';
+import { applicationController } from '../controllers/applicationController';
 import {
   budgetController,
   lineItemController,
@@ -562,5 +563,151 @@ router.get(
 );
 
 router.post('/bulk/validate', authenticateToken, bulkController.validate);
+
+// ============================================================================
+// Application Tracking Routes
+// ============================================================================
+router.post(
+  '/applications',
+  authenticateToken,
+  auditLog(AuditAction.CREATE, 'application'),
+  applicationController.create
+);
+
+router.get(
+  '/applications',
+  authenticateToken,
+  applicationController.getAll
+);
+
+router.get(
+  '/applications/summary',
+  authenticateToken,
+  authorize(UserRole.ADMIN, UserRole.BUDGET_ANALYST, UserRole.AUDITOR),
+  applicationController.getSummary
+);
+
+router.get(
+  '/applications/:id',
+  authenticateToken,
+  validateParams(schemas.idParamSchema),
+  applicationController.getById
+);
+
+router.put(
+  '/applications/:id',
+  authenticateToken,
+  validateParams(schemas.idParamSchema),
+  auditLog(AuditAction.UPDATE, 'application'),
+  applicationController.update
+);
+
+router.post(
+  '/applications/:id/submit',
+  authenticateToken,
+  validateParams(schemas.idParamSchema),
+  auditLog(AuditAction.UPDATE, 'application'),
+  applicationController.submit
+);
+
+router.post(
+  '/applications/:id/assign',
+  authenticateToken,
+  authorize(UserRole.ADMIN, UserRole.PROGRAM_MANAGER),
+  validateParams(schemas.idParamSchema),
+  auditLog(AuditAction.UPDATE, 'application'),
+  applicationController.assign
+);
+
+router.post(
+  '/applications/:id/start-review',
+  authenticateToken,
+  authorize(UserRole.ADMIN, UserRole.BUDGET_ANALYST, UserRole.PROGRAM_MANAGER),
+  validateParams(schemas.idParamSchema),
+  auditLog(AuditAction.UPDATE, 'application'),
+  applicationController.startReview
+);
+
+router.post(
+  '/applications/:id/complete-review',
+  authenticateToken,
+  authorize(UserRole.ADMIN, UserRole.BUDGET_ANALYST, UserRole.PROGRAM_MANAGER),
+  validateParams(schemas.idParamSchema),
+  auditLog(AuditAction.UPDATE, 'application'),
+  applicationController.completeReview
+);
+
+router.post(
+  '/applications/:id/approve',
+  authenticateToken,
+  authorize(UserRole.ADMIN, UserRole.APPROVER),
+  validateParams(schemas.idParamSchema),
+  auditLog(AuditAction.APPROVE, 'application'),
+  applicationController.approve
+);
+
+router.post(
+  '/applications/:id/reject',
+  authenticateToken,
+  authorize(UserRole.ADMIN, UserRole.APPROVER),
+  validateParams(schemas.idParamSchema),
+  auditLog(AuditAction.REJECT, 'application'),
+  applicationController.reject
+);
+
+router.post(
+  '/applications/:id/disburse-funds',
+  authenticateToken,
+  authorize(UserRole.ADMIN, UserRole.BUDGET_ANALYST),
+  validateParams(schemas.idParamSchema),
+  auditLog(AuditAction.CREATE, 'disbursement'),
+  applicationController.disburseFunds
+);
+
+router.post(
+  '/applications/:id/close',
+  authenticateToken,
+  authorize(UserRole.ADMIN, UserRole.PROGRAM_MANAGER),
+  validateParams(schemas.idParamSchema),
+  auditLog(AuditAction.UPDATE, 'application'),
+  applicationController.close
+);
+
+router.post(
+  '/applications/:id/cancel',
+  authenticateToken,
+  validateParams(schemas.idParamSchema),
+  auditLog(AuditAction.UPDATE, 'application'),
+  applicationController.cancel
+);
+
+router.get(
+  '/applications/:id/status-history',
+  authenticateToken,
+  validateParams(schemas.idParamSchema),
+  applicationController.getStatusHistory
+);
+
+router.post(
+  '/applications/:id/comments',
+  authenticateToken,
+  validateParams(schemas.idParamSchema),
+  auditLog(AuditAction.CREATE, 'comment'),
+  applicationController.addComment
+);
+
+router.get(
+  '/applications/:id/comments',
+  authenticateToken,
+  validateParams(schemas.idParamSchema),
+  applicationController.getComments
+);
+
+router.get(
+  '/applications/:id/disbursements',
+  authenticateToken,
+  validateParams(schemas.idParamSchema),
+  applicationController.getDisbursements
+);
 
 export default router;

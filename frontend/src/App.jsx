@@ -5,6 +5,8 @@ import Dashboard from './pages/Dashboard';
 import Budgets from './pages/Budgets';
 import Programs from './pages/Programs';
 import Execution from './pages/Execution';
+import Applications from './pages/Applications';
+import ApplicationManagement from './pages/ApplicationManagement';
 import Header from './components/Header';
 import Navigation from './components/Navigation';
 
@@ -96,6 +98,22 @@ function App() {
               element={
                 isAuthenticated ? 
                 <Execution /> : 
+                <Navigate to="/login" />
+              } 
+            />
+            <Route 
+              path="/applications" 
+              element={
+                isAuthenticated ? 
+                <Applications /> : 
+                <Navigate to="/login" />
+              } 
+            />
+            <Route 
+              path="/application-management" 
+              element={
+                isAuthenticated ? 
+                <ApplicationManagement /> : 
                 <Navigate to="/login" />
               } 
             />
