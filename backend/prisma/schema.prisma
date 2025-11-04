@@ -125,6 +125,7 @@ model Organization {
   programs     Program[]
   budgets      Budget[]
   reports      Report[]
+  applications Application[]
 
   @@index([parentId])
   @@index([tenantId])
@@ -184,6 +185,19 @@ model User {
   reports              Report[]
   createdObligations   Obligation[]  @relation("ObligationCreator")
   cancelledObligations Obligation[]  @relation("ObligationCanceller")
+  
+  // Application tracking relations
+  applications             Application[]              @relation("ApplicationApplicant")
+  assignedApplications     Application[]              @relation("ApplicationAssignedTo")
+  approvedApplications     Application[]              @relation("ApplicationApprover")
+  rejectedApplications     Application[]              @relation("ApplicationRejecter")
+  fundedApplications       Application[]              @relation("ApplicationFunder")
+  createdApplications      Application[]              @relation("ApplicationCreator")
+  updatedApplications      Application[]              @relation("ApplicationUpdater")
+  applicationStatusChanges ApplicationStatusHistory[] @relation("StatusChangeUser")
+  uploadedDocuments        ApplicationDocument[]      @relation("DocumentUploader")
+  applicationComments      ApplicationComment[]       @relation("CommentAuthor")
+  createdDisbursements     FundDisbursement[]         @relation("DisbursementCreator")
 
   @@index([tenantId])
   @@index([organizationId])
@@ -761,6 +775,241 @@ model Report {
   @@index([createdBy])
   @@index([status])
   @@map("reports")
+}
+
+// -----------------------------------------------------------------------------
+// Application Tracking System - Citizen benefit applications
+// -----------------------------------------------------------------------------
+
+// Application Status Enum
+enum ApplicationStatus {
+  draft
+  submitted
+  under_review
+  pending_approval
+  approved
+  rejected
+  funded
+  closed
+  cancelled
+}
+
+// Application Type Enum
+enum ApplicationType {
+  homeowners_assistance_program  // DoD HAP for BRAC
+  disaster_assistance
+  veterans_benefits
+  housing_assistance
+  financial_aid
+  other
+}
+
+// Property Loss Calculation Type
+enum LossCalculationType {
+  market_value_decline  // Home value declined below mortgage
+  forced_sale           // Required to sell below market value
+  relocation_costs      // Moving and relocation expenses
+  other
+}
+
+// Application Model
+model Application {
+  id                    String             @id @default(uuid()) @db.Uuid
+  tenantId              String             @map("tenant_id") @db.Uuid
+  organizationId        String?            @map("organization_id") @db.Uuid
+  
+  // Application identification
+  applicationNumber     String             @unique @map("application_number") @db.VarChar(50)
+  applicationType       ApplicationType    @map("application_type")
+  status                ApplicationStatus  @default(draft)
+  
+  // Applicant information
+  applicantId           String?            @map("applicant_id") @db.Uuid
+  applicantFirstName    String             @map("applicant_first_name") @db.VarChar(100)
+  applicantLastName     String             @map("applicant_last_name") @db.VarChar(100)
+  applicantEmail        String             @map("applicant_email") @db.VarChar(255)
+  applicantPhone        String?            @map("applicant_phone") @db.VarChar(20)
+  applicantAddress      String?            @map("applicant_address") @db.Text
+  
+  // Military/Employment information (for HAP)
+  militaryBranch        String?            @map("military_branch") @db.VarChar(100)
+  militaryRank          String?            @map("military_rank") @db.VarChar(50)
+  serviceNumber         String?            @map("service_number") @db.VarChar(50)
+  baseClosureDate       DateTime?          @map("base_closure_date") @db.Date
+  affectedBase          String?            @map("affected_base") @db.VarChar(255)
+  
+  // Property information (for HAP)
+  propertyAddress       String?            @map("property_address") @db.Text
+  propertyPurchaseDate  DateTime?          @map("property_purchase_date") @db.Date
+  propertyPurchasePrice Decimal?           @map("property_purchase_price") @db.Decimal(20, 2)
+  currentMortgageBalance Decimal?          @map("current_mortgage_balance") @db.Decimal(20, 2)
+  propertyAppraisedValue Decimal?          @map("property_appraised_value") @db.Decimal(20, 2)
+  propertySalePrice     Decimal?           @map("property_sale_price") @db.Decimal(20, 2)
+  propertySaleDate      DateTime?          @map("property_sale_date") @db.Date
+  
+  // Loss calculation
+  lossCalculationType   LossCalculationType? @map("loss_calculation_type")
+  calculatedLoss        Decimal?           @map("calculated_loss") @db.Decimal(20, 2)
+  approvedAmount        Decimal?           @map("approved_amount") @db.Decimal(20, 2)
+  fundedAmount          Decimal?           @map("funded_amount") @db.Decimal(20, 2)
+  
+  // Application content
+  description           String?            @db.Text
+  justification         String?            @db.Text
+  additionalInfo        Json?              @map("additional_info")
+  
+  // Assignment and processing
+  assignedToId          String?            @map("assigned_to_id") @db.Uuid
+  assignedAt            DateTime?          @map("assigned_at") @db.Timestamptz(6)
+  reviewStartedAt       DateTime?          @map("review_started_at") @db.Timestamptz(6)
+  reviewCompletedAt     DateTime?          @map("review_completed_at") @db.Timestamptz(6)
+  approvedAt            DateTime?          @map("approved_at") @db.Timestamptz(6)
+  approvedBy            String?            @map("approved_by") @db.Uuid
+  rejectedAt            DateTime?          @map("rejected_at") @db.Timestamptz(6)
+  rejectedBy            String?            @map("rejected_by") @db.Uuid
+  rejectionReason       String?            @map("rejection_reason") @db.Text
+  fundedAt              DateTime?          @map("funded_at") @db.Timestamptz(6)
+  fundedBy              String?            @map("funded_by") @db.Uuid
+  
+  // Submission tracking
+  submittedAt           DateTime?          @map("submitted_at") @db.Timestamptz(6)
+  lastStatusChangeAt    DateTime?          @map("last_status_change_at") @db.Timestamptz(6)
+  
+  // Metadata
+  metadata              Json               @default("{}")
+  createdAt             DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy             String?            @map("created_by") @db.Uuid
+  updatedBy             String?            @map("updated_by") @db.Uuid
+  
+  // Relations
+  organization          Organization?      @relation(fields: [organizationId], references: [id])
+  applicant             User?              @relation("ApplicationApplicant", fields: [applicantId], references: [id])
+  assignedTo            User?              @relation("ApplicationAssignedTo", fields: [assignedToId], references: [id])
+  approver              User?              @relation("ApplicationApprover", fields: [approvedBy], references: [id])
+  rejecter              User?              @relation("ApplicationRejecter", fields: [rejectedBy], references: [id])
+  funder                User?              @relation("ApplicationFunder", fields: [fundedBy], references: [id])
+  creator               User?              @relation("ApplicationCreator", fields: [createdBy], references: [id])
+  updater               User?              @relation("ApplicationUpdater", fields: [updatedBy], references: [id])
+  
+  documents             ApplicationDocument[]
+  statusHistory         ApplicationStatusHistory[]
+  comments              ApplicationComment[]
+  fundDisbursements     FundDisbursement[]
+  
+  @@index([tenantId])
+  @@index([organizationId])
+  @@index([applicationNumber])
+  @@index([applicationType])
+  @@index([status])
+  @@index([applicantId])
+  @@index([assignedToId])
+  @@index([submittedAt])
+  @@index([createdAt])
+  @@map("applications")
+}
+
+// Application Status History - Track all status changes
+model ApplicationStatusHistory {
+  id             String             @id @default(uuid()) @db.Uuid
+  applicationId  String             @map("application_id") @db.Uuid
+  tenantId       String             @map("tenant_id") @db.Uuid
+  
+  fromStatus     ApplicationStatus? @map("from_status")
+  toStatus       ApplicationStatus  @map("to_status")
+  reason         String?            @db.Text
+  notes          String?            @db.Text
+  
+  changedAt      DateTime           @default(now()) @map("changed_at") @db.Timestamptz(6)
+  changedBy      String?            @map("changed_by") @db.Uuid
+  
+  // Relations
+  application    Application        @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  user           User?              @relation("StatusChangeUser", fields: [changedBy], references: [id])
+  
+  @@index([applicationId])
+  @@index([tenantId])
+  @@index([changedAt])
+  @@map("application_status_history")
+}
+
+// Application Documents - Supporting documents
+model ApplicationDocument {
+  id             String      @id @default(uuid()) @db.Uuid
+  applicationId  String      @map("application_id") @db.Uuid
+  tenantId       String      @map("tenant_id") @db.Uuid
+  
+  fileName       String      @map("file_name") @db.VarChar(255)
+  fileType       String      @map("file_type") @db.VarChar(100)
+  fileSize       Int         @map("file_size")
+  filePath       String      @map("file_path") @db.Text
+  fileUrl        String?     @map("file_url") @db.Text
+  
+  documentType   String      @map("document_type") @db.VarChar(100)
+  description    String?     @db.Text
+  
+  uploadedAt     DateTime    @default(now()) @map("uploaded_at") @db.Timestamptz(6)
+  uploadedBy     String?     @map("uploaded_by") @db.Uuid
+  
+  // Relations
+  application    Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  uploader       User?       @relation("DocumentUploader", fields: [uploadedBy], references: [id])
+  
+  @@index([applicationId])
+  @@index([tenantId])
+  @@index([documentType])
+  @@map("application_documents")
+}
+
+// Application Comments - Communication thread
+model ApplicationComment {
+  id             String      @id @default(uuid()) @db.Uuid
+  applicationId  String      @map("application_id") @db.Uuid
+  tenantId       String      @map("tenant_id") @db.Uuid
+  
+  comment        String      @db.Text
+  isInternal     Boolean     @default(false) @map("is_internal")
+  
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy      String?     @map("created_by") @db.Uuid
+  
+  // Relations
+  application    Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  user           User?       @relation("CommentAuthor", fields: [createdBy], references: [id])
+  
+  @@index([applicationId])
+  @@index([tenantId])
+  @@index([createdAt])
+  @@map("application_comments")
+}
+
+// Fund Disbursement - Track fund assignments and payments
+model FundDisbursement {
+  id                  String      @id @default(uuid()) @db.Uuid
+  applicationId       String      @map("application_id") @db.Uuid
+  tenantId            String      @map("tenant_id") @db.Uuid
+  
+  disbursementNumber  String      @unique @map("disbursement_number") @db.VarChar(50)
+  amount              Decimal     @db.Decimal(20, 2)
+  disbursementDate    DateTime    @map("disbursement_date") @db.Date
+  paymentMethod       String      @map("payment_method") @db.VarChar(100)
+  transactionId       String?     @map("transaction_id") @db.VarChar(255)
+  
+  status              String      @default("pending") @db.VarChar(50)
+  notes               String?     @db.Text
+  
+  createdAt           DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy           String?     @map("created_by") @db.Uuid
+  
+  // Relations
+  application         Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  creator             User?       @relation("DisbursementCreator", fields: [createdBy], references: [id])
+  
+  @@index([applicationId])
+  @@index([tenantId])
+  @@index([disbursementNumber])
+  @@index([disbursementDate])
+  @@map("fund_disbursements")
 }
 
 // -----------------------------------------------------------------------------
